@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Controller support using asyncio.
 
 import asyncio
@@ -17,10 +16,16 @@ class Button(Enum):
 class Joystick:
     @classmethod
     async def create(cls):
+        joy = await Joystick.create("--no-uinput", "--detach-kernel-driver")
+        return joy
+
+    # Spawns xboxdrv using the given arguments. This is useful for telling xboxdrv to work with
+    # a second controller, or a specific device
+    @classmethod
+    async def create(cls, *args):
         self = Joystick()
         self.proc = await asyncio.create_subprocess_exec("xboxdrv",
-                                                 "--no-uinput",
-                                                 "--detach-kernel-driver",
+                                                 *args,
                                                  stdout=asyncio.subprocess.PIPE)
 
         # Init callback dict
@@ -42,6 +47,7 @@ class Joystick:
                 raise RuntimeError('Failed to read xboxdrv')
 
         return self
+
 
     async def init(self):
         while True:

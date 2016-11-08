@@ -2,8 +2,9 @@
 # Example usage of xbox-async library
 import xbox_async
 from xbox_async import Button
-import sys
 import asyncio
+import sys
+import signal
 
 def triggerHandle(val):
     if val is 255:
@@ -13,6 +14,9 @@ def stickHandle(x, y):
     deadzone = 4000
     if abs(x) > deadzone or abs(y) > deadzone:
         print("Stick at (%d, %d)" % (x, y))
+
+def quit():
+    sys.exit(0)
 
 async def example():
     joy = await xbox_async.Joystick.create()
@@ -29,4 +33,5 @@ if __name__ == "__main__":
     else:
         loop = asyncio.get_event_loop()
 
+    loop.add_signal_handler(signal.SIGINT, quit)
     loop.run_until_complete(example())
