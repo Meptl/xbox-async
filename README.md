@@ -6,5 +6,5 @@ from xboxdrv to determine joystick events.
 Creates a child xboxdrv process so will require root permission or proper udev setup to run.
 
 Dependencies:
-*python 3.5+
-*xboxdrv
+* python 3.5+
+* xboxdrv

@@ -11,18 +11,16 @@ def triggerHandle(val):
         print('Left trigger maxed!')
 
 def stickHandle(x, y):
-    deadzone = 4000
-    if abs(x) > deadzone or abs(y) > deadzone:
-        print("Stick at (%d, %d)" % (x, y))
+    print("Stick at (%f, %f)" % (x, y))
 
 def quit():
     sys.exit(0)
 
 async def example():
     joy = await xbox_async.Joystick.create()
-    joy.onButton(Button.A, lambda: print('A pressed'))
-    joy.onButton(Button.LTrigger, triggerHandle)
-    joy.onButton(Button.LStick, stickHandle)
+    joy.on_button(Button.A, lambda: print('A pressed'))
+    joy.on_button(Button.LTrigger, triggerHandle)
+    joy.on_button(Button.LStick, stickHandle)
     joy = await joy.init()
     joy.close()
 

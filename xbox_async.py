@@ -1,10 +1,12 @@
-# Controller support using asyncio.
-
+""" Controller support using asyncio.
+Handlers for digital buttons occur twice per button press.
+Analog signals are called whenever events occur.
+"""
 import asyncio
 from enum import Enum
 
-# Enum for controller events. Values are arbitrary but unique.
 class Button(Enum):
+    """ Enum for controller events. Values are arbitrary but unique. """
     A, B, X, Y = range(0, 4)
     LStick, RStick, LTrigger, RTrigger = range(4, 8)
     L3, R3, LB, RB = range(8, 12)
@@ -15,18 +17,24 @@ class Button(Enum):
 
 class Joystick:
     @classmethod
-    async def create(cls):
-        joy = await Joystick.create("--no-uinput", "--detach-kernel-driver")
+    async def create(cls, deadzone=4000, normalize=False):
+        """ No argument constructor. Creates xboxdrv with default arguments. """
+        joy = await Joystick.create("--no-uinput", "--detach-kernel-driver",
+                                    deadzone=deadzone,
+                                    normalize=normalize)
         return joy
 
-    # Spawns xboxdrv using the given arguments. This is useful for telling xboxdrv to work with
-    # a second controller, or a specific device
     @classmethod
-    async def create(cls, *args):
+    async def create(cls, *args, deadzone=4000, normalize=False):
+        """ Spawns xboxdrv using the given arguments. This is useful for telling xboxdrv to work with
+        a second controller, or a specific device.
+        """
         self = Joystick()
+        self.deadzone = deadzone
+        self.normalize = normalize
         self.proc = await asyncio.create_subprocess_exec("xboxdrv",
-                                                 *args,
-                                                 stdout=asyncio.subprocess.PIPE)
+                                                         *args,
+                                                         stdout=asyncio.subprocess.PIPE)
 
         # Init callback dict
         self.handlers = {}
@@ -59,45 +67,60 @@ class Joystick:
 
         return self
 
-    def onButton(self, button, callback):
+    def on_button(self, button, callback):
         self.handlers[button].append(callback)
 
-    # Each handler will parse its portion of the input line
     def call_handlers(self, line):
-        self.handleLStick(line)
-        self.handleRStick(line)
-        self.handleDpad(line)
-        self.handleSpecial(line)
-        self.handleActionButtons(line)
-        self.handleBumpers(line)
-        self.handleTriggers(line)
+        """ Each handler will parse its portion of the input line """
+        self.handle_stick_l(line)
+        self.handle_stick_r(line)
+        self.handle_dpad(line)
+        self.handle_special(line)
+        self.handle_action_buttons(line)
+        self.handle_bumpers(line)
+        self.handle_triggers(line)
 
-    # Returns a value from (-32768 to +32767)
-    def handleLStick(self, line):
+    def handle_stick_l(self, line):
+        """ Returns a value from (-32768 to +32767) or (-1 to 1) if normalize=True"""
         if self.handlers[Button.LStick]:
             leftX = int(line[3:9])
             leftY = int(line[13:19])
-            for cb in self.handlers[Button.LStick]:
-                cb(leftX, leftY)
+
+            # if value is beyond deadzone, do stuff
+            if not(abs(leftX) < self.deadzone and abs(leftY) < self.deadzone):
+                if self.normalize:
+                    leftX /= 32768.0
+                    leftY /= 32768.0
+
+                for cb in self.handlers[Button.LStick]:
+                    cb(leftX, leftY)
 
         # "Clicking" the left analog stick
         if self.handlers[Button.L3] and int(line[90:91]):
             for cb in self.handlers[Button.L3]:
                 cb()
 
-    def handleRStick(self, line):
+    def handle_stick_r(self, line):
+        """ Returns a value from (-32768 to +32767) or (-1 to 1) if normalize=True"""
         if self.handlers[Button.RStick]:
             rightX = self.axisScale(int(line[24:30]))
             rightY = self.axisScale(int(line[34:40]))
-            for cb in self.handlers[Button.LStick]:
-                cb(leftX, leftY)
+
+            # if value is beyond deadzone, do stuff
+            if not(abs(rightX) < self.deadzone and abs(rightY) < self.deadzone):
+                if self.normalize:
+                    rightX /= 32768.0
+                    rightY /= 32768.0
+
+                for cb in self.handlers[Button.LStick]:
+                    cb(leftX, leftY)
 
         # "Clicking" the left analog stick
         if self.handlers[Button.R3] and int(line[95:96]):
             for cb in self.handlers[Button.R3]:
                 cb()
 
-    def handleDpad(self, line):
+    def handle_dpad(self, line):
         if self.handlers[Button.DpadU] and int(line[45:46]):
             for cb in self.handlers[Button.DpadU]:
                 cb()
@@ -114,7 +137,7 @@ class Joystick:
             for cb in self.handlers[Button.DpadR]:
                 cb()
 
-    def handleSpecial(self, line):
+    def handle_special(self, line):
         if self.handlers[Button.Back] and int(line[68:69]):
             for cb in self.handlers[Button.Back]:
                 cb()
@@ -127,7 +150,7 @@ class Joystick:
             for cb in self.handlers[Button.Start]:
                 cb()
 
-    def handleActionButtons(self, line):
+    def handle_action_buttons(self, line):
         if self.handlers[Button.A] and int(line[100:101]):
             for cb in self.handlers[Button.A]:
                 cb()
@@ -142,7 +165,7 @@ class Joystick:
             for cb in self.handlers[Button.Y]:
                 cb()
 
-    def handleBumpers(self, line):
+    def handle_bumpers(self, line):
         if self.handlers[Button.LB] and int(line[118:119]):
             for cb in self.handlers[Button.LB]:
                 cb()
@@ -151,15 +174,21 @@ class Joystick:
             for cb in self.handlers[Button.RB]:
                 cb()
 
-    # Returns a value from 0 - 255
-    def handleTriggers(self, line):
+    def handle_triggers(self, line):
+        """ Returns a value from 0 - 255 or 0 - 1 if normalize=True"""
         if self.handlers[Button.LTrigger]:
             for cb in self.handlers[Button.LTrigger]:
-                cb(int(line[129:132]))
+                val = int(line[129:132])
+                if self.normalize:
+                    val /= 255.0
+                cb(val)
 
         if self.handlers[Button.RTrigger]:
             for cb in self.handlers[Button.RTrigger]:
-                cb(int(line[136:139]))
+                val = int(line[136:139])
+                if self.normalize:
+                    val /= 255.0
+                cb(val)
 
     def close(self):
         self.proc.kill()
