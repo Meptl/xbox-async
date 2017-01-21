@@ -100,8 +100,8 @@ class Joystick:
     def handle_stick_r(self, line):
         """ Returns a value from (-32768 to +32767) or (-1 to 1) if normalize=True"""
         if self.handlers[Button.RStick]:
-            rightX = self.axisScale(int(line[24:30]))
-            rightY = self.axisScale(int(line[34:40]))
+            rightX = int(line[24:30])
+            rightY = int(line[34:40])
 
             # if value is beyond deadzone, do stuff
             if not(abs(rightX) < self.deadzone and abs(rightY) < self.deadzone):
@@ -109,8 +109,8 @@ class Joystick:
                     rightX /= 32768.0
                     rightY /= 32768.0
 
-                for cb in self.handlers[Button.LStick]:
-                    cb(leftX, leftY)
+                for cb in self.handlers[Button.RStick]:
+                    cb(rightX, rightY)
 
         # "Clicking" the left analog stick
         if self.handlers[Button.R3] and int(line[95:96]):
