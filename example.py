@@ -21,7 +21,10 @@ async def example():
     joy.on_button(Button.A, lambda: print('A pressed'))
     joy.on_button(Button.LTrigger, triggerHandle)
     joy.on_button(Button.LStick, stickHandle)
-    joy = await joy.init()
+    while True:
+        joy = await joy.read()
+        print("Hi")
+
     joy.close()
 
 if __name__ == "__main__":

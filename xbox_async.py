@@ -57,13 +57,10 @@ class Joystick:
         return self
 
 
-    async def init(self):
-        while True:
-            line = await self.proc.stdout.readline()
-            if line:
-                self.call_handlers(line)
-            else:
-                break
+    async def read(self):
+        line = await self.proc.stdout.readline()
+        if line:
+            self.call_handlers(line)
 
         return self
 
