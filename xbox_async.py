@@ -17,15 +17,10 @@ class Button(Enum):
 
 class Joystick:
     @classmethod
-    async def create(cls, deadzone=4000, normalize=False):
-        """ No argument constructor. Creates xboxdrv with default arguments. """
-        joy = await Joystick.create("--no-uinput", "--detach-kernel-driver",
-                                    deadzone=deadzone,
-                                    normalize=normalize)
-        return joy
-
-    @classmethod
-    async def create(cls, *args, deadzone=4000, normalize=False):
+    async def create(cls,
+                     args=["--no-uinput", "--detach-kernel-driver"],
+                     deadzone=4000,
+                     normalize=False):
         """ Spawns xboxdrv using the given arguments. This is useful for telling xboxdrv to work with
         a second controller, or a specific device.
         """
